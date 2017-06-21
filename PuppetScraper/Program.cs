@@ -19,6 +19,7 @@ namespace PuppetScraper {
 					.Where(n => n.Name == "hr")
 					.Select(n => new Resource {
 						Name = n.NextSibling.NextSibling.InnerText,
+						Description = FindResourceDescription(n.NextSibling.NextSibling.InnerText, document),
 						Properties = GetProperties(n.NextSibling.NextSibling.InnerText, document),
 					})
 					.OrderBy(t => t.Name)
@@ -125,6 +126,25 @@ namespace PuppetScraper {
 			}
 
 			return result.OrderBy(s => s).ToList();
+		}
+
+		private static string FindResourceDescription(string resourceType, HtmlDocument document) {
+
+			var sb = new StringBuilder();
+
+			var attributesTitleNode = document.DocumentNode.Descendants()
+				.SingleOrDefault(n => n.Id == $"{resourceType}-description")
+				.NextSibling
+				.NextSibling;
+
+			var thisAttr = attributesTitleNode;
+			while (thisAttr != null && thisAttr.Name != "hr" && thisAttr.Name != "h3") {
+				sb.Append(thisAttr.InnerHtml);
+
+				thisAttr = thisAttr.NextSibling;
+			}
+
+			return sb.ToString();
 		}
 	}
 

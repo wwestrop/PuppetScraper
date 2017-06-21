@@ -15,19 +15,11 @@ namespace PuppetScraper {
 				var document = new HtmlDocument();
 				document.LoadHtml(html);
 
-				//var typerNames = document.DocumentNode.Descendants()
-				//	.Where(n => n.Name == "hr").First();
-
-				var typeNames = document.DocumentNode.Descendants()
+				var documentedPuppetTypes = document.DocumentNode.Descendants()
 					.Where(n => n.Name == "hr")
-					.Select(n => n.NextSibling.NextSibling.Id)
-					.ToList();
-
-				var typeNameAndAttrs = document.DocumentNode.Descendants()
-					.Where(n => n.Name == "hr")
-					.Select(n => new {
+					.Select(n => new Resource {
 						Name = n.NextSibling.NextSibling.InnerText,
-						Attributes = GetProperties(n.NextSibling.NextSibling.InnerText, document),
+						Properties = GetProperties(n.NextSibling.NextSibling.InnerText, document),
 					})
 					.OrderBy(t => t.Name)
 					.ToList();
@@ -35,9 +27,9 @@ namespace PuppetScraper {
 			}
 		}
 
-		private static List<string> GetProperties(string resourceType, HtmlDocument fromDocument) {
+		private static List<Property> GetProperties(string resourceType, HtmlDocument fromDocument) {
 
-			var result = new List<string>();
+			var result = new List<Property>();
 			
 			var attributesTitleNode = fromDocument.DocumentNode.Descendants()
 				.SingleOrDefault(n => n.Id == $"{resourceType}-attributes")
@@ -46,8 +38,21 @@ namespace PuppetScraper {
 			var thisAttr = attributesTitleNode;
 			while (thisAttr != null && thisAttr.Name != "hr" && thisAttr.Name != "h3") {
 				if (thisAttr.Name == "h4") {
+					PuppetType propertyType;
 					var enumValues = GetEnumValues(resourceType, thisAttr);
-					result.Add(thisAttr.InnerText);
+					if (enumValues != null) {
+						propertyType = PuppetType.Enum;
+					}
+					else {
+						propertyType = PuppetType.Variant;
+					}
+
+					var propertyInfo = new Property {
+						Name = thisAttr.InnerText,
+						Type = propertyType,
+						PossibleValues = enumValues,
+					};
+					result.Add(propertyInfo);
 				}
 
 				thisAttr = thisAttr.NextSibling;
@@ -57,13 +62,14 @@ namespace PuppetScraper {
 			// TODO get enum values for type (e.g. ensure we know will always have, what about the rest?????)
 			// TODO how do we tell a boolean. Force? Enabled?
 
-			return result.OrderBy(s => s).ToList();
+			return result.OrderBy(r => r.Name).ToList();
 		}
 
 		/// <param name="parameterTitleElement">The element that contains the title of the parameter that the documentation is 
 		/// describing. We'll search down from there to try and infer the possible values.</param>
 		/// <returns><c>null</c> if this doesn't appear to be an enum type</returns>
 		private static List<string> GetEnumValues(string resourceType, HtmlNode parameterTitleElement) {
+
 			List<string> result = null;
 
 			result = ReadEnumValues(parameterTitleElement);
@@ -99,7 +105,7 @@ namespace PuppetScraper {
 		}
 
 		private static List<string> FindProviderValues(string resourceType, HtmlNode parameterTitleElement) {
-			if(parameterTitleElement.InnerText.ToLower() != "provider") {
+			if (parameterTitleElement.InnerText.ToLower() != "provider") {
 				return null;
 			}
 
@@ -120,27 +126,6 @@ namespace PuppetScraper {
 
 			return result.OrderBy(s => s).ToList();
 		}
-
-		///// <summary>
-		///// Searches for nodes matching a given predicate for the given type
-		///// </summary>
-		///// <param name="typeTitle">The HTML node corresponding to the title of the resource</param>
-		//private void SearchType(HtmlNode typeTitle) {
-
-		//	var attributesTitleNode = fromDocument.DocumentNode.Descendants()
-		//		.SingleOrDefault(n => n.Id == $"{forType}-attributes")
-		//		.NextSibling;
-
-		//	var thisAttr = attributesTitleNode;
-		//	while (thisAttr != null && thisAttr.Name != "hr" && thisAttr.Name != "h3") {
-		//		if (thisAttr.Name == "h4") {
-		//			result.Add(thisAttr.InnerText);
-		//		}
-
-		//		thisAttr = thisAttr.NextSibling;
-		//	}
-		//}
-
 	}
 
 }

@@ -1,8 +1,12 @@
 ﻿using HtmlAgilityPack;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 
 namespace PuppetScraper {
 
@@ -25,6 +29,7 @@ namespace PuppetScraper {
 					.OrderBy(t => t.Name)
 					.ToList();
 
+				ExportAsJson(documentedPuppetTypes);
 			}
 		}
 
@@ -39,7 +44,7 @@ namespace PuppetScraper {
 			var thisAttr = attributesTitleNode;
 			while (thisAttr != null && thisAttr.Name != "hr" && thisAttr.Name != "h3") {
 				if (thisAttr.Name == "h4") {
-					PuppetType propertyType;
+					string propertyType;
 					var enumValues = GetEnumValues(resourceType, thisAttr);
 					if (enumValues != null) {
 						propertyType = PuppetType.Enum;
@@ -64,6 +69,28 @@ namespace PuppetScraper {
 			// TODO how do we tell a boolean. Force? Enabled?
 
 			return result.OrderBy(r => r.Name).ToList();
+		}
+
+		private static void ExportAsJson(List<Resource> resources) {
+
+			string preamble = "import { PuppetType } from '../types/puppetType';\r\nimport { IResource } from '../types/IResource';\r\n\r\nlet BuiltInResources: IResource[] = ";
+			string postamble = ";\r\n\r\nexport default BuiltInResources;";
+
+			var serializer = new JsonSerializer();
+			using (var stringWriter = new StringWriter())
+			using (var jsonWriter = new JsonTextWriter(stringWriter)) {
+				var sb = stringWriter.GetStringBuilder();
+				sb.Append(preamble);
+
+				jsonWriter.QuoteName = false;
+				jsonWriter.Formatting = Formatting.Indented;
+				serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+				serializer.Serialize(jsonWriter, resources);
+
+				sb.Append(postamble);
+
+				File.WriteAllText(@"builtInResources.ts", sb.ToString());
+			}
 		}
 
 		/// <param name="parameterTitleElement">The element that contains the title of the parameter that the documentation is 

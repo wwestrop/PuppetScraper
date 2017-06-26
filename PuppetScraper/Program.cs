@@ -174,9 +174,7 @@ namespace PuppetScraper {
 				thisAttr = thisAttr.NextSibling;
 			}
 
-			FormattingSimplifier.Simplify(sb);
-
-			return sb.ToString();
+			return FormattingSimplifier.Simplify(sb);
 		}
 	}
 

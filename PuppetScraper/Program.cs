@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PuppetScraper {
 
@@ -73,13 +74,15 @@ namespace PuppetScraper {
 
 		private static void ExportAsJson(List<Resource> resources) {
 
-			string preamble = "import { PuppetType } from '../types/puppetType';\r\nimport { IResource } from '../types/IResource';\r\n\r\nlet BuiltInResources: IResource[] = ";
+			string autogenWarning = "/* Auto-generated file. Do not edit. */ \r\n\r\n";
+			string preamble = "import { PuppetType } from '../types/puppetType';\r\nimport { IResource } from '../types/IResource';\r\n\r\nconst BuiltInResources: IResource[] = ";
 			string postamble = ";\r\n\r\nexport default BuiltInResources;";
 
 			var serializer = new JsonSerializer();
 			using (var stringWriter = new StringWriter())
 			using (var jsonWriter = new JsonTextWriter(stringWriter)) {
 				var sb = stringWriter.GetStringBuilder();
+				sb.AppendLine(autogenWarning);
 				sb.Append(preamble);
 
 				jsonWriter.QuoteName = false;
@@ -89,7 +92,7 @@ namespace PuppetScraper {
 
 				sb.Append(postamble);
 
-				File.WriteAllText(@"builtInResources.ts", sb.ToString());
+				File.WriteAllText(@"builtInResources.generated.ts", sb.ToString());
 			}
 		}
 
@@ -170,6 +173,8 @@ namespace PuppetScraper {
 
 				thisAttr = thisAttr.NextSibling;
 			}
+
+			FormattingSimplifier.Simplify(sb);
 
 			return sb.ToString();
 		}
